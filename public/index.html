@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Unit 418 Serin East Tagaytay | 24/7 AI Concierge</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="chat-app">
+    <header class="chat-header">
+      <div class="brand">
+        <div class="avatar">🌴</div>
+        <div class="info">
+          <h1>Unit 418 Serin East Tagaytay</h1>
+          <p>2-Bedroom Staycation Concierge</p>
+        </div>
+      </div>
+      <div class="engine-indicator">
+        <span class="badge" id="engineStatusBadge">⚡ Statistical NLU (0-MB)</span>
+      </div>
+    </header>
+
+    <main class="chat-main" id="chatMessages" role="log" aria-live="polite">
+      <!-- Chat bubbles inserted here -->
+    </main>
+
+    <div class="quick-options" id="quickOptionsTray">
+      <!-- Interactive Option Buttons inserted here -->
+    </div>
+
+    <footer class="chat-footer">
+      <form id="chatForm" class="chat-input-form">
+        <input 
+          type="text" 
+          id="chatInput" 
+          placeholder="Ask a question in English, Tagalog, or Taglish..." 
+          autocomplete="off" 
+          aria-label="Your message"
+        />
+        <button type="submit" id="sendBtn" aria-label="Send Message">Send</button>
+      </form>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

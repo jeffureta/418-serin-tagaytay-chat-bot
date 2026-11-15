@@ -1,0 +1,36 @@
+{
+  "name": "@tagaytay-condo/chatbot-sdk",
+  "version": "0.1.0",
+  "description": "Customer-facing & prospective guest AI chatbot SDK for Unit 418 Serin East Tagaytay",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "condo-bot": "bin/condo-bot.js"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./adapters": "./src/adapters/index.js",
+    "./tools": "./src/tools/index.js"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "test:eval": "node bin/condo-bot.js eval",
+    "build:gas": "node scripts/build-gas.js",
+    "start": "node src/server.js",
+    "chat": "node bin/condo-bot.js chat"
+  },
+  "keywords": [
+    "tagaytay",
+    "condo",
+    "chatbot",
+    "ai-sdk",
+    "google-apps-script",
+    "window-ai",
+    "gemini-nano"
+  ],
+  "author": "Jeff Ureta",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "query": "Magkano po ang covered parking sa Serin East?",
+    "expected_intent": "parking",
+    "expected_language": "taglish"
+  },
+  {
+    "query": "What time is check in and check out?",
+    "expected_intent": "checkin_checkout",
+    "expected_language": "en"
+  },
+  {
+    "query": "Anong oras po pwedeng pumasok sa condo at kailan ang alis?",
+    "expected_intent": "checkin_checkout",
+    "expected_language": "tl"
+  },
+  {
+    "query": "Paano po makuha yung smart lock PIN code sa pintuan?",
+    "expected_intent": "smart_lock",
+    "expected_language": "taglish"
+  },
+  {
+    "query": "Where do I submit the building admin endorsement form?",
+    "expected_intent": "endorsement",
+    "expected_language": "en"
+  },
+  {
+    "query": "Pwede po ba magluto ng ulam sa kusina?",
+    "expected_intent": "cooking",
+    "expected_language": "tl"
+  },
+  {
+    "query": "Can we fry tuyo or dried fish in the unit?",
+    "expected_intent": "cooking",
+    "expected_language": "en"
+  },
+  {
+    "query": "Magkano security deposit if direct booking?",
+    "expected_intent": "security_deposit",
+    "expected_language": "taglish"
+  }
+]
