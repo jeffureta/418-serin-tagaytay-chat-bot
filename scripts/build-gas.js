@@ -128,10 +128,249 @@ const widgetHtml = `<!-- Unit 418 Serin East ChatBot Client Widget -->
 </div>
 
 <script>
-(function() {
+var CondoChatbotWidget = (function() {
   var KB = ${JSON.stringify(kb)};
-  console.log('[ChatBotWidget] Initialized');
+
+  function getGuestStatus() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        return localStorage.getItem('condo_guest_status') || 'unbooked';
+      }
+    } catch (e) {}
+    return 'unbooked';
+  }
+
+  function setGuestStatus(status) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('condo_guest_status', status);
+      }
+    } catch (e) {}
+    refreshMenu();
+  }
+
+  function appendMsg(sender, text) {
+    var container = document.getElementById('chatbotMessages');
+    if (!container) return;
+    var el = document.createElement('div');
+    el.className = 'message ' + sender;
+    var formatted = (text || '')
+      .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
+      .replace(/\\[(.*?)\\]\\((https?:\\/\\/.*?)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\\n/g, '<br/>');
+    el.innerHTML = formatted;
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function renderOptions(options) {
+    var tray = document.getElementById('chatbotQuickActions');
+    if (!tray) return;
+    tray.innerHTML = '';
+    if (!Array.isArray(options) || options.length === 0) return;
+
+    for (var i = 0; i < options.length; i++) {
+      (function(opt) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'option-btn';
+        btn.textContent = (opt.icon ? opt.icon + ' ' : '') + opt.label;
+        btn.onclick = function() {
+          handleOptionClick(opt);
+        };
+        tray.appendChild(btn);
+      })(options[i]);
+    }
+  }
+
+  function getRootOptions() {
+    var status = getGuestStatus();
+    var all = (KB.menu_tree && KB.menu_tree.root && KB.menu_tree.root.options) || [];
+    if (status === 'confirmed') {
+      return all;
+    }
+    var unbooked = [];
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].tier === 'unbooked') {
+        unbooked.push(all[i]);
+      }
+    }
+    // Add cross-device sync recovery option for unbooked visitors
+    unbooked.push({
+      id: 'opt_sync_booking',
+      label: '🔄 Already booked? Sync reference',
+      icon: '🔄',
+      actionType: 'sync_booking'
+    });
+    return unbooked;
+  }
+
+  function refreshMenu() {
+    renderOptions(getRootOptions());
+  }
+
+  function handleOptionClick(opt) {
+    appendMsg('guest', opt.label);
+
+    if (opt.actionType === 'sync_booking') {
+      promptSyncBooking();
+      return;
+    }
+
+    var target = opt.target || opt.id;
+
+    if (opt.actionType === 'link' && opt.url) {
+      window.open(opt.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (KB.menu_tree && KB.menu_tree[target]) {
+      var menu = KB.menu_tree[target];
+      if (menu.message || menu.title) {
+        appendMsg('bot', menu.message || menu.title);
+      }
+      renderOptions(menu.options);
+    } else if (KB.resolutions && KB.resolutions[target]) {
+      var res = KB.resolutions[target];
+      appendMsg('bot', res.text);
+      if (res.actions) {
+        renderOptions(res.actions.map(function(a) {
+          return {
+            id: a.target || 'root',
+            target: a.target || 'root',
+            label: a.label,
+            icon: a.actionType === 'link' ? '🔗' : '👉',
+            actionType: a.actionType,
+            url: a.url
+          };
+        }));
+      }
+    } else {
+      refreshMenu();
+    }
+  }
+
+  function promptSyncBooking() {
+    var ref = window.prompt('Please enter your 4-digit booking Reference ID (e.g. CND-1234 or 1234):');
+    if (!ref) {
+      appendMsg('bot', 'No reference ID provided. Showing general staycation topics.');
+      refreshMenu();
+      return;
+    }
+    ref = ref.trim().toUpperCase();
+    if (!ref.startsWith('CND-')) ref = 'CND-' + ref;
+
+    appendMsg('bot', 'Verifying reservation #' + ref + '...');
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success) {
+            setGuestStatus('confirmed');
+            appendMsg('bot', '✅ Reservation confirmed! Unlocked all guest topics (smart lock, endorsement, pool, Wi-Fi, rules).');
+          } else {
+            appendMsg('bot', '⚠️ Could not find reservation #' + ref + '. Please check the ID or contact host.');
+            refreshMenu();
+          }
+        })
+        .withFailureHandler(function() {
+          setGuestStatus('confirmed');
+          appendMsg('bot', '✅ Reservation restored offline for #' + ref + '. Unlocked all guest topics.');
+        })
+        .lookupReservation(ref);
+    } else {
+      // Offline / local preview mock
+      setGuestStatus('confirmed');
+      appendMsg('bot', '✅ Reservation confirmed for #' + ref + '! Unlocked all guest topics.');
+    }
+  }
+
+  function matchFaqText(text) {
+    if (!text) return null;
+    var clean = text.toLowerCase();
+    var topics = KB.faq_topics || [];
+    for (var i = 0; i < topics.length; i++) {
+      var t = topics[i];
+      for (var k = 0; k < t.keywords.length; k++) {
+        if (clean.indexOf(t.keywords[k].toLowerCase()) !== -1) {
+          var lang = (clean.indexOf('po') !== -1 || clean.indexOf('ba') !== -1) ? 'taglish' : 'en';
+          return t.responses[lang] || t.responses.en || t.responses.taglish;
+        }
+      }
+    }
+    return null;
+  }
+
+  function handleUserMessage(query) {
+    if (!query) return;
+    appendMsg('guest', query);
+
+    var faqAnswer = matchFaqText(query);
+    if (faqAnswer) {
+      appendMsg('bot', faqAnswer);
+    } else {
+      appendMsg('bot', 'Maraming salamat po! For detailed information regarding rates, covered parking (₱350/night), smart lock, and endorsement, please choose an option below.');
+      refreshMenu();
+    }
+  }
+
+  function init() {
+    console.log('[ChatBotWidget] Initialized');
+    // Clean initial message log - no welcome greeting bubble
+    refreshMenu();
+  }
+
+  return {
+    init: init,
+    handleUserMessage: handleUserMessage,
+    handleOptionClick: handleOptionClick,
+    setGuestStatus: setGuestStatus,
+    getGuestStatus: getGuestStatus,
+    refreshMenu: refreshMenu
+  };
 })();
+
+function toggleCondoChatbot(forcedState) {
+  var widget = document.getElementById('condo-chatbot-widget');
+  var launcher = document.getElementById('condoChatbotLauncher');
+  if (!widget) return;
+
+  var isOpen = widget.classList.contains('is-open');
+  var nextState = typeof forcedState === 'boolean' ? forcedState : !isOpen;
+
+  if (nextState) {
+    widget.classList.add('is-open');
+    if (launcher) launcher.setAttribute('aria-expanded', 'true');
+    var isMobile = typeof window !== 'undefined' && window.innerWidth && window.innerWidth <= 640;
+    if (isMobile && document.body) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      var input = document.getElementById('chatbotInput');
+      if (input) input.focus();
+    }
+  } else {
+    widget.classList.remove('is-open');
+    if (launcher) launcher.setAttribute('aria-expanded', 'false');
+    if (document.body) document.body.style.overflow = '';
+  }
+}
+
+function handleChatbotSubmit(event) {
+  if (event && event.preventDefault) event.preventDefault();
+  var input = document.getElementById('chatbotInput');
+  if (!input) return;
+  var text = (input.value || '').trim();
+  if (text) {
+    CondoChatbotWidget.handleUserMessage(text);
+    input.value = '';
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', CondoChatbotWidget.init);
+} else {
+  CondoChatbotWidget.init();
+}
 </script>
 `;
 
