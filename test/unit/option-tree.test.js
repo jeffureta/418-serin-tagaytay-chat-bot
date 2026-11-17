@@ -9,11 +9,16 @@ const kb = JSON.parse(fs.readFileSync(path.resolve('data/knowledge-base.json'), 
 test('OptionTree - retrieves root menu and navigates options', () => {
   const tree = new OptionTree(kb);
 
-  // 1. Root Menu
-  const rootMenu = tree.getMenu('root');
-  assert.equal(rootMenu.id, 'root');
-  assert.ok(rootMenu.options.length >= 5);
-  assert.equal(rootMenu.options[0].id, 'opt_booking');
+  // 1. Root Menu (unbooked default returns rates and parking)
+  const unbookedMenu = tree.getMenu('root', { guestStatus: 'unbooked' });
+  assert.equal(unbookedMenu.id, 'root');
+  assert.equal(unbookedMenu.options.length, 2);
+  assert.equal(unbookedMenu.options[0].id, 'opt_booking');
+  assert.equal(unbookedMenu.options[1].id, 'opt_parking');
+
+  // Confirmed guest menu returns all options
+  const confirmedMenu = tree.getMenu('root', { guestStatus: 'confirmed' });
+  assert.ok(confirmedMenu.options.length >= 7);
 
   // 2. Sub-menu navigation
   const subMenu = tree.resolveOption('opt_booking');

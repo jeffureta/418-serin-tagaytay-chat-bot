@@ -37,7 +37,7 @@ export class CondoChatbotClient {
   /**
    * Starts a new guest conversation session.
    */
-  startSession({ guestName = null, guestContact = null, channel = 'web_widget' } = {}) {
+  startSession({ guestName = null, guestContact = null, channel = 'web_widget', guestStatus = 'unbooked' } = {}) {
     const session = this.db.createSession({
       guestName,
       guestContact,
@@ -45,19 +45,22 @@ export class CondoChatbotClient {
       providerUsed: this.providerName
     });
 
-    const rootMenu = this.optionTree.getMenu('root');
+    const rootMenu = this.optionTree.getMenu('root', { guestStatus });
 
-    this.db.saveMessage({
-      sessionId: session.id,
-      sender: 'bot',
-      content: rootMenu.message,
-      optionId: 'root'
-    });
+    if (rootMenu.message) {
+      this.db.saveMessage({
+        sessionId: session.id,
+        sender: 'bot',
+        content: rootMenu.message,
+        optionId: 'root'
+      });
+    }
 
     return {
       sessionId: session.id,
-      message: rootMenu.message,
-      menu: rootMenu
+      message: rootMenu.message || null,
+      menu: rootMenu,
+      guestStatus
     };
   }
 

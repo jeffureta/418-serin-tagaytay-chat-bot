@@ -22,5 +22,6 @@ test('build-gas - compiles dist/ChatBotCore.gs and dist/ChatBotWidget.html with 
 
   const widgetContent = fs.readFileSync(widgetPath, 'utf-8');
   assert.ok(widgetContent.includes('condo-chatbot-widget'));
-  assert.ok(widgetContent.includes('window.ai'));
+  assert.ok(!widgetContent.includes('chatbotHeaderTitle'), 'chatbotHeaderTitle must be removed');
+  assert.ok(!widgetContent.includes('engineBadge'), 'engineBadge must be removed');
 });

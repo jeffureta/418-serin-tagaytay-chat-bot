@@ -13,12 +13,18 @@ test('CondoChatbotClient - handles option clicks, free-text turns, and records h
     provider: 'statistical_nlu'
   });
 
-  // 1. Initial Greeting / Menu
+  // 1. Initial Start Session (defaults to unbooked with clean start)
   const init = client.startSession({ guestName: 'Ana Reyes' });
   assert.ok(init.sessionId);
   assert.ok(init.menu);
   assert.equal(init.menu.id, 'root');
-  assert.ok(init.menu.options.length >= 5);
+  assert.equal(init.menu.options.length, 2);
+  assert.equal(init.menu.options[0].id, 'opt_booking');
+  assert.equal(init.menu.options[1].id, 'opt_parking');
+
+  // Confirmed guest session
+  const confirmedSession = client.startSession({ guestName: 'Confirmed Guest', guestStatus: 'confirmed' });
+  assert.ok(confirmedSession.menu.options.length >= 7);
 
   // 2. Click Option (Parking)
   const turn1 = await client.processTurn({
@@ -52,7 +58,7 @@ test('CondoChatbotClient - handles option clicks, free-text turns, and records h
 
   // 6. Verify stats
   const stats = client.getStats();
-  assert.equal(stats.totalSessions, 1);
+  assert.equal(stats.totalSessions, 2);
   assert.ok(stats.totalMessages >= 3);
 
   client.close();
