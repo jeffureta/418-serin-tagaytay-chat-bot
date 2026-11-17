@@ -103,12 +103,24 @@ body {
   word-break: break-word;
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .message.bot {
   align-self: flex-start;
   background-color: var(--bot-bubble);
   border: 1px solid var(--border);
   color: var(--text-main);
   border-bottom-left-radius: 4px;
+  animation: fadeInUp 1s ease-out;
 }
 
 .message.guest {
@@ -176,6 +188,7 @@ body {
   gap: 8px;
   margin: 6px 0 12px auto;
   width: 100%;
+  animation: fadeInUp 1s ease-out;
 }
 
 .chatbot-thinking-indicator {

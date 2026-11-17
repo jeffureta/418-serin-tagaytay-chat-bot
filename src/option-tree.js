@@ -11,6 +11,7 @@ export class OptionTree {
     this.kb = knowledgeBase;
     this.menus = knowledgeBase.menu_tree || {};
     this.resolutions = knowledgeBase.resolutions || {};
+    this.workflow = knowledgeBase.booking_workflow || null;
     
     // Index all options by id for rapid lookup
     this.optionMap = new Map();
@@ -78,5 +79,15 @@ export class OptionTree {
     }
 
     return { type: 'unknown', data: null };
+  }
+
+  /**
+   * Retrieves a specific step definition from the JSON booking workflow.
+   * @param {string} stepName
+   * @returns {Object|null}
+   */
+  getWorkflowStep(stepName) {
+    if (!this.workflow || !this.workflow.steps) return null;
+    return this.workflow.steps[stepName] || null;
   }
 }

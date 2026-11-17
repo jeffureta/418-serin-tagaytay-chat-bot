@@ -12,7 +12,7 @@ const engineBadge = document.getElementById('engineStatusBadge');
 
 // Detect Chrome Built-In Prompt API
 if (window.ai && window.ai.languageModel) {
-  engineBadge.textContent = '✨ Chrome Built-in AI (Gemini Nano)';
+  engineBadge.textContent = 'Chrome Built-in AI (Gemini Nano)';
   engineBadge.style.background = '#10b981';
 }
 
@@ -59,7 +59,7 @@ function showThinking(callback) {
     const active = document.getElementById('activeThinkingIndicator');
     if (active) active.remove();
     if (callback) callback();
-  }, 2000);
+  }, 1000);
 }
 
 function renderOptions(options, targetContainer) {
@@ -121,9 +121,35 @@ async function initChat() {
   }
 }
 
+let bookingState = {
+  dates: null,
+  guests: null,
+  step: null
+};
+
 async function sendOption(optionId, label) {
   clearActiveOptions();
   appendMessage('guest', label);
+
+  if (optionId === 'sub_dates_custom') {
+    bookingState.step = 'awaiting_custom_dates';
+    showThinking(() => {
+      appendMessage('bot', 'Alright! Which dates?');
+      chatInput.placeholder = 'e.g. Dec 20-22, next weekend, etc.';
+      chatInput.focus();
+    });
+    return;
+  }
+
+  if (optionId === 'sub_dates_weekend') {
+    bookingState.dates = 'Upcoming weekend';
+  } else if (optionId === 'sub_dates_weekday') {
+    bookingState.dates = 'Weekday staycation';
+  }
+
+  if (optionId === 'sub_guests_small') bookingState.guests = '1-2 Guests';
+  if (optionId === 'sub_guests_family') bookingState.guests = '3-4 Guests';
+  if (optionId === 'sub_guests_group') bookingState.guests = '5-6 Guests';
 
   showThinking(async () => {
     try {
@@ -137,7 +163,11 @@ async function sendOption(optionId, label) {
       });
       const data = await res.json();
 
-      appendMessage('bot', data.content);
+      let botContent = data.content;
+      if (bookingState.dates && bookingState.guests && data.type === 'resolution') {
+        botContent = `Direct Reservation Summary (${bookingState.dates}, ${bookingState.guests}):\n\n` + botContent;
+      }
+      appendMessage('bot', botContent);
 
       if (data.type === 'menu' && data.menu) {
         appendInlineOptions(data.menu.options);
@@ -145,7 +175,7 @@ async function sendOption(optionId, label) {
         appendInlineOptions(data.actions.map(a => ({
           id: a.target || 'root',
           label: a.label,
-          icon: a.actionType === 'link' ? '🔗' : ''
+          icon: ''
         })));
       }
     } catch (err) {
@@ -159,6 +189,23 @@ async function sendMessage(text) {
   if (!text) return;
   clearActiveOptions();
   appendMessage('guest', text);
+
+  // If in custom dates step
+  if (bookingState.step === 'awaiting_custom_dates') {
+    bookingState.dates = text;
+    bookingState.step = 'awaiting_guests';
+    showThinking(() => {
+      appendMessage('bot', 'How many guests?');
+      appendInlineOptions([
+        { id: 'sub_guests_small', label: '1 to 2 Guests (Couple / Solo)' },
+        { id: 'sub_guests_family', label: '3 to 4 Guests (Small Family)' },
+        { id: 'sub_guests_group', label: '5 to 6 Guests (Maximum Group)' },
+        { id: 'back_dates', label: 'Back to Dates' }
+      ]);
+      chatInput.placeholder = 'Ask a question in English, Tagalog, or Taglish...';
+    });
+    return;
+  }
 
   showThinking(async () => {
     try {
@@ -180,7 +227,7 @@ async function sendMessage(text) {
         appendInlineOptions(data.actions.map(a => ({
           id: a.target || 'root',
           label: a.label,
-          icon: a.actionType === 'link' ? '🔗' : ''
+          icon: ''
         })));
       }
     } catch (err) {
@@ -188,25 +235,6 @@ async function sendMessage(text) {
       appendMessage('bot', 'Maraming salamat po! For detailed information, please select an option.');
     }
   });
-}
-  appendMessage('guest', text);
-  chatInput.value = '';
-
-  try {
-    const res = await fetch('/api/chat/turn', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: currentSessionId,
-        message: text
-      })
-    });
-    const data = await res.json();
-    appendMessage('bot', data.content);
-  } catch (err) {
-    console.error(err);
-    appendMessage('bot', 'Sorry, I could not process your query right now. Please select an option above.');
-  }
 }
 
 chatForm.addEventListener('submit', (e) => {

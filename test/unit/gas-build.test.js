@@ -47,4 +47,12 @@ test('build-gas - compiles dist/ChatBotCore.gs and dist/ChatBotWidget.html with 
   assert.ok(widgetContent.includes('chatbotOptionHint'), 'chatbotOptionHint must exist');
   assert.ok(widgetContent.includes('Analyzing the query'), 'Analyzing the query thinking indicator must exist');
   assert.ok(widgetContent.includes('chatbot-thinking-indicator'), 'chatbot-thinking-indicator class must exist');
+
+  // Verify 1-second animation classes and 1000ms delay
+  assert.ok(widgetContent.includes('fadeInUp 1s'), 'fadeInUp 1s animation must be present in widget styles');
+  assert.ok(widgetContent.includes('1000'), 'Thinking indicator delay must be 1000ms');
+
+  // Verify zero emojis in compiled widget (excluding standard symbols like multiplication x &#10005;)
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{2714}\u{2716}-\u{27BF}]/u;
+  assert.ok(!emojiRegex.test(widgetContent), 'ChatBotWidget.html must not contain any decorative unicode emojis');
 });

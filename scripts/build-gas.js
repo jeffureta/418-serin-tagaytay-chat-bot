@@ -114,6 +114,27 @@ fs.writeFileSync(path.join(distDir, 'ChatBotCore.gs'), coreGs, 'utf-8');
 
 // 2. Build dist/ChatBotWidget.html
 const widgetHtml = `<!-- Unit 418 Serin East ChatBot Client Widget -->
+<style>
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+#condo-chatbot-widget .chatbot-initial-tray {
+  background-color: transparent;
+}
+#condo-chatbot-widget .message.bot {
+  animation: fadeInUp 1s ease-out;
+}
+#condo-chatbot-widget .inline-options-container {
+  animation: fadeInUp 1s ease-out;
+}
+</style>
 <div id="condo-chatbot-widget" class="condo-chatbot-container" role="dialog" aria-modal="true" aria-label="Chat Bot">
   <div class="chatbot-header">
     <span class="chatbot-title">Chat Bot</span>
@@ -190,7 +211,7 @@ var CondoChatbotWidget = (function() {
       var active = document.getElementById('activeThinkingIndicator');
       if (active) active.remove();
       if (callback) callback();
-    }, 2000);
+    }, 1000);
   }
 
   function appendMsg(sender, text) {
@@ -277,9 +298,38 @@ var CondoChatbotWidget = (function() {
     }
   }
 
+  var bookingState = {
+    dates: null,
+    guests: null,
+    step: null
+  };
+
   function handleOptionClick(opt) {
     clearActiveOptions();
     appendMsg('guest', opt.label);
+
+    if (opt.id === 'sub_dates_custom') {
+      bookingState.step = 'awaiting_custom_dates';
+      showThinking(function() {
+        appendMsg('bot', 'Alright! Which dates?');
+        var input = document.getElementById('chatbotInput');
+        if (input) {
+          input.placeholder = 'e.g. Dec 20-22, next weekend, etc.';
+          input.focus();
+        }
+      });
+      return;
+    }
+
+    if (opt.id === 'sub_dates_weekend') {
+      bookingState.dates = 'Upcoming weekend';
+    } else if (opt.id === 'sub_dates_weekday') {
+      bookingState.dates = 'Weekday staycation';
+    }
+
+    if (opt.id === 'sub_guests_small') bookingState.guests = '1-2 Guests';
+    if (opt.id === 'sub_guests_family') bookingState.guests = '3-4 Guests';
+    if (opt.id === 'sub_guests_group') bookingState.guests = '5-6 Guests';
 
     showThinking(function() {
       if (opt.actionType === 'sync_booking') {
@@ -307,14 +357,18 @@ var CondoChatbotWidget = (function() {
         appendInlineOptions(menu.options);
       } else if (KB.resolutions && KB.resolutions[target]) {
         var res = KB.resolutions[target];
-        appendMsg('bot', res.text);
+        var text = res.text;
+        if (bookingState.dates && bookingState.guests && target === 'res_book_checkout') {
+          text = 'Direct Reservation Summary (' + bookingState.dates + ', ' + bookingState.guests + '):\n\n' + text;
+        }
+        appendMsg('bot', text);
         if (res.actions) {
           appendInlineOptions(res.actions.map(function(a) {
             return {
               id: a.target || 'root',
               target: a.target || 'root',
               label: a.label,
-              icon: a.actionType === 'link' ? '🔗' : '',
+              icon: '',
               actionType: a.actionType,
               url: a.url
             };
@@ -331,6 +385,14 @@ var CondoChatbotWidget = (function() {
     toggleCondoChatbot(false);
     var form = document.getElementById('bookingForm') || document.querySelector('form');
     if (form) {
+      if (bookingState.dates) {
+        var datesInput = form.querySelector('input[name="dates"], input[name="checkIn"], #dates');
+        if (datesInput) datesInput.value = bookingState.dates;
+      }
+      if (bookingState.guests) {
+        var guestsInput = form.querySelector('input[name="guests"], select[name="guests"], #guests');
+        if (guestsInput) guestsInput.value = bookingState.guests;
+      }
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
       var firstInput = form.querySelector('input');
       if (firstInput) setTimeout(function() { firstInput.focus(); }, 400);
@@ -354,21 +416,21 @@ var CondoChatbotWidget = (function() {
         .withSuccessHandler(function(res) {
           if (res && res.success) {
             setGuestStatus('confirmed');
-            appendMsg('bot', '✅ Reservation confirmed! Unlocked all guest topics (smart lock, endorsement, pool, Wi-Fi, rules).');
+            appendMsg('bot', 'Reservation confirmed! Unlocked all guest topics (smart lock, endorsement, pool, Wi-Fi, rules).');
           } else {
-            appendMsg('bot', '⚠️ Could not find reservation #' + ref + '. Please check the ID or contact host.');
+            appendMsg('bot', 'Could not find reservation #' + ref + '. Please check the ID or contact host.');
             refreshMenu();
           }
         })
         .withFailureHandler(function() {
           setGuestStatus('confirmed');
-          appendMsg('bot', '✅ Reservation restored offline for #' + ref + '. Unlocked all guest topics.');
+          appendMsg('bot', 'Reservation restored offline for #' + ref + '. Unlocked all guest topics.');
         })
         .lookupReservation(ref);
     } else {
       // Offline / local preview mock
       setGuestStatus('confirmed');
-      appendMsg('bot', '✅ Reservation confirmed for #' + ref + '! Unlocked all guest topics.');
+      appendMsg('bot', 'Reservation confirmed for #' + ref + '! Unlocked all guest topics.');
     }
   }
 
@@ -392,6 +454,23 @@ var CondoChatbotWidget = (function() {
     if (!query) return;
     clearActiveOptions();
     appendMsg('guest', query);
+
+    if (bookingState.step === 'awaiting_custom_dates') {
+      bookingState.dates = query;
+      bookingState.step = 'awaiting_guests';
+      showThinking(function() {
+        appendMsg('bot', 'How many guests?');
+        appendInlineOptions([
+          { id: 'sub_guests_small', label: '1 to 2 Guests (Couple / Solo)' },
+          { id: 'sub_guests_family', label: '3 to 4 Guests (Small Family)' },
+          { id: 'sub_guests_group', label: '5 to 6 Guests (Maximum Group)' },
+          { id: 'back_dates', label: 'Back to Dates' }
+        ]);
+        var input = document.getElementById('chatbotInput');
+        if (input) input.placeholder = 'Type a question or select an option...';
+      });
+      return;
+    }
 
     showThinking(function() {
       var faqAnswer = matchFaqText(query);

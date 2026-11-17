@@ -49,4 +49,24 @@ test('OptionTree - retrieves root menu and navigates options', () => {
   const back = tree.resolveOption('back_root');
   assert.equal(back.type, 'menu');
   assert.equal(back.data.id, 'root');
+
+  // 8. Hospitality Booking Workflow & Zero-Emoji verification
+  assert.equal(
+    tree.getWorkflowStep('dates')?.prompt,
+    "Hello! I'm here to help book your stay. When are you looking to stay with us?"
+  );
+  assert.equal(
+    tree.getWorkflowStep('ask_dates')?.prompt,
+    "Alright! Which dates?"
+  );
+  assert.equal(
+    tree.getWorkflowStep('guests')?.prompt,
+    "How many guests?"
+  );
+
+  // Verify zero emojis in knowledge base
+  const rawKb = fs.readFileSync(path.resolve('data/knowledge-base.json'), 'utf-8');
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{27BF}]/u;
+  assert.ok(!emojiRegex.test(rawKb), 'Knowledge base must not contain any unicode emojis');
 });
+
