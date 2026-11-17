@@ -359,7 +359,7 @@ var CondoChatbotWidget = (function() {
         var res = KB.resolutions[target];
         var text = res.text;
         if (bookingState.dates && bookingState.guests && target === 'res_book_checkout') {
-          text = 'Direct Reservation Summary (' + bookingState.dates + ', ' + bookingState.guests + '):\n\n' + text;
+          text = 'Direct Reservation Summary (' + bookingState.dates + ', ' + bookingState.guests + '):\\n\\n' + text;
         }
         appendMsg('bot', text);
         if (res.actions) {
@@ -485,6 +485,13 @@ var CondoChatbotWidget = (function() {
 
   function init() {
     console.log('[ChatBotWidget] Initialized');
+    var launcher = document.getElementById('condoChatbotLauncher');
+    if (launcher && !launcher.getAttribute('data-chatbot-bound')) {
+      launcher.setAttribute('data-chatbot-bound', 'true');
+      launcher.addEventListener('click', function() {
+        toggleCondoChatbot();
+      });
+    }
     refreshMenu();
   }
 
@@ -538,6 +545,11 @@ function handleChatbotSubmit(event) {
     CondoChatbotWidget.handleUserMessage(text);
     input.value = '';
   }
+}
+
+if (typeof window !== 'undefined') {
+  window.toggleCondoChatbot = toggleCondoChatbot;
+  window.handleChatbotSubmit = handleChatbotSubmit;
 }
 
 if (document.readyState === 'loading') {

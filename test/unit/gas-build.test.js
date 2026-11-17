@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 
 test('build-gas - compiles dist/ChatBotCore.gs and dist/ChatBotWidget.html with valid syntax', () => {
   // Execute gas builder script
@@ -55,4 +56,84 @@ test('build-gas - compiles dist/ChatBotCore.gs and dist/ChatBotWidget.html with 
   // Verify zero emojis in compiled widget (excluding standard symbols like multiplication x &#10005;)
   const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{2714}\u{2716}-\u{27BF}]/u;
   assert.ok(!emojiRegex.test(widgetContent), 'ChatBotWidget.html must not contain any decorative unicode emojis');
+});
+
+test('ChatBotWidget.html - clicking #condoChatbotLauncher opens widget and exposes window.toggleCondoChatbot', () => {
+  const widgetContent = fs.readFileSync(path.resolve('dist/ChatBotWidget.html'), 'utf-8');
+  const scriptMatch = widgetContent.match(/<script>([\s\S]*?)<\/script>/);
+  assert.ok(scriptMatch, 'ChatBotWidget.html must contain a <script> block');
+
+  function makeClassList() {
+    const set = new Set();
+    return {
+      add: (c) => set.add(c),
+      remove: (c) => set.delete(c),
+      contains: (c) => set.has(c)
+    };
+  }
+
+  function makeElement(id) {
+    const attrs = {};
+    const listeners = {};
+    return {
+      id,
+      classList: makeClassList(),
+      style: {},
+      value: '',
+      innerHTML: '',
+      textContent: '',
+      setAttribute: (k, v) => { attrs[k] = String(v); },
+      getAttribute: (k) => attrs[k] ?? null,
+      addEventListener: (type, fn) => {
+        listeners[type] = listeners[type] || [];
+        listeners[type].push(fn);
+      },
+      dispatchEvent: (type) => {
+        (listeners[type] || []).forEach(fn => fn({ preventDefault: () => {} }));
+      },
+      appendChild: () => {},
+      focus: () => {}
+    };
+  }
+
+  const elements = {
+    'condo-chatbot-widget': makeElement('condo-chatbot-widget'),
+    'condoChatbotLauncher': makeElement('condoChatbotLauncher'),
+    'chatbotInput': makeElement('chatbotInput'),
+    'chatbotMessages': makeElement('chatbotMessages'),
+    'chatbotQuickActions': makeElement('chatbotQuickActions'),
+    'chatbotOptionHint': makeElement('chatbotOptionHint')
+  };
+
+  const sandbox = {
+    window: { innerWidth: 1024 },
+    document: {
+      readyState: 'complete',
+      body: { style: {} },
+      getElementById: (id) => elements[id] || null,
+      createElement: () => makeElement('dynamic'),
+      querySelectorAll: () => [],
+      addEventListener: () => {}
+    },
+    localStorage: {
+      getItem: () => null,
+      setItem: () => {}
+    },
+    navigator: { maxTouchPoints: 0 },
+    google: undefined,
+    setTimeout: () => 0,
+    console
+  };
+  sandbox.window.document = sandbox.document;
+  vm.createContext(sandbox);
+  vm.runInContext(scriptMatch[1], sandbox);
+
+  assert.equal(typeof sandbox.window.toggleCondoChatbot, 'function', 'window.toggleCondoChatbot must be exposed');
+
+  // Simulate clicking the launcher button without inline onclick
+  elements.condoChatbotLauncher.dispatchEvent('click');
+
+  assert.equal(elements['condo-chatbot-widget'].classList.contains('is-open'), true, 'Widget should open on launcher click');
+  assert.equal(elements.condoChatbotLauncher.getAttribute('aria-expanded'), 'true', 'Launcher aria-expanded should be true');
+  assert.equal(elements.condoChatbotLauncher.classList.contains('is-hidden'), true, 'Launcher should be hidden when open');
 });
