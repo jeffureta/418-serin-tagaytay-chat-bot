@@ -116,10 +116,11 @@ fs.writeFileSync(path.join(distDir, 'ChatBotCore.gs'), coreGs, 'utf-8');
 const widgetHtml = `<!-- Unit 418 Serin East ChatBot Client Widget -->
 <div id="condo-chatbot-widget" class="condo-chatbot-container" role="dialog" aria-modal="true" aria-label="Chat Bot">
   <div class="chatbot-header">
+    <span class="chatbot-title">Chat Bot</span>
     <button type="button" class="chatbot-close-btn" aria-label="Close Chat" onclick="toggleCondoChatbot(false)">✕</button>
   </div>
-  <div class="chatbot-messages" id="chatbotMessages" role="log" aria-live="polite"></div>
   <div class="chatbot-quick-actions" id="chatbotQuickActions" role="group" aria-label="Quick options"></div>
+  <div class="chatbot-messages" id="chatbotMessages" role="log" aria-live="polite"></div>
   <form class="chatbot-input-bar" id="chatbotInputForm" onsubmit="handleChatbotSubmit(event)">
     <label for="chatbotInput" class="sr-only">Type a question</label>
     <input type="text" id="chatbotInput" placeholder="Type a question or select an option..." autocomplete="off" />
@@ -198,8 +199,8 @@ var CondoChatbotWidget = (function() {
     // Add cross-device sync recovery option for unbooked visitors
     unbooked.push({
       id: 'opt_sync_booking',
-      label: '🔄 Already booked? Sync reference',
-      icon: '🔄',
+      label: 'Already booked? Sync reference',
+      icon: '',
       actionType: 'sync_booking'
     });
     return unbooked;
@@ -340,7 +341,10 @@ function toggleCondoChatbot(forcedState) {
 
   if (nextState) {
     widget.classList.add('is-open');
-    if (launcher) launcher.setAttribute('aria-expanded', 'true');
+    if (launcher) {
+      launcher.setAttribute('aria-expanded', 'true');
+      launcher.classList.add('is-hidden');
+    }
     var isMobile = typeof window !== 'undefined' && window.innerWidth && window.innerWidth <= 640;
     if (isMobile && document.body) {
       document.body.style.overflow = 'hidden';
@@ -350,7 +354,10 @@ function toggleCondoChatbot(forcedState) {
     }
   } else {
     widget.classList.remove('is-open');
-    if (launcher) launcher.setAttribute('aria-expanded', 'false');
+    if (launcher) {
+      launcher.setAttribute('aria-expanded', 'false');
+      launcher.classList.remove('is-hidden');
+    }
     if (document.body) document.body.style.overflow = '';
   }
 }
