@@ -31,7 +31,7 @@ async function main() {
     }
     const session = client.startSession({ channel: 'cli_ask' });
     const turn = await client.processTurn({ sessionId: session.sessionId, message: query });
-    console.log(`\n🤖 [Unit 418 Concierge]:\n${turn.content}\n`);
+    console.log(`\n🤖 [Chat Bot]:\n${turn.content}\n`);
     process.exit(0);
   }
 
@@ -69,19 +69,29 @@ async function main() {
 
   // Interactive REPL Menu
   if (command === 'chat') {
+    const tierArg = args.find(a => a.startsWith('--tier='));
+    const guestStatus = tierArg ? tierArg.split('=')[1] : 'unbooked';
+
     console.log('\n======================================================');
-    console.log('   🌴 Unit 418 Serin East Tagaytay - Guest Concierge 🌴');
+    console.log('                 💬 Chat Bot REPL                     ');
+    console.log(`                 Tier: [${guestStatus.toUpperCase()}] `);
     console.log('======================================================');
     
-    const session = client.startSession({ channel: 'cli_interactive' });
+    let currentGuestStatus = guestStatus;
+    const session = client.startSession({ channel: 'cli_interactive', guestStatus: currentGuestStatus });
     let currentMenu = session.menu;
 
     function renderMenu() {
-      console.log(`\n🤖 [Concierge]: ${currentMenu.message || currentMenu.title}\n`);
+      if (currentMenu.message) {
+        console.log(`\n🤖 [Chat Bot]: ${currentMenu.message}\n`);
+      }
       if (currentMenu.options) {
         currentMenu.options.forEach((opt, idx) => {
           console.log(`  [${idx + 1}] ${opt.icon || '•'} ${opt.label}`);
         });
+        if (currentGuestStatus === 'unbooked') {
+          console.log(`  [S] 🔄 Sync Booking (Enter Reference ID)`);
+        }
         console.log(`  [0] 🚪 Exit`);
       }
       console.log('\nType an option number, or type any custom question:');
@@ -99,9 +109,17 @@ async function main() {
       if (!input) return;
 
       if (input === '0' || input.toLowerCase() === 'exit') {
-        console.log('\nThank you for exploring Unit 418 Serin East Tagaytay. Have a wonderful day!\n');
+        console.log('\nThank you! Have a wonderful day!\n');
         client.close();
         process.exit(0);
+      }
+
+      if (input.toLowerCase() === 's' && currentGuestStatus === 'unbooked') {
+        currentGuestStatus = 'confirmed';
+        currentMenu = client.optionTree.getMenu('root', { guestStatus: 'confirmed' });
+        console.log('\n✅ Booking synchronized! Unlocked confirmed guest topics.');
+        renderMenu();
+        return;
       }
 
       const num = parseInt(input, 10);
@@ -116,7 +134,7 @@ async function main() {
           currentMenu = res.menu;
           renderMenu();
         } else if (res.type === 'resolution') {
-          console.log(`\n🤖 [Concierge]:\n${res.content}\n`);
+          console.log(`\n🤖 [Chat Bot]:\n${res.content}\n`);
           if (res.actions) {
             console.log('--- Quick Actions ---');
             res.actions.forEach(a => {
@@ -125,7 +143,7 @@ async function main() {
             });
           }
           console.log('\n(Press Enter to return to main menu or ask another question)');
-          currentMenu = client.optionTree.getMenu('root');
+          currentMenu = client.optionTree.getMenu('root', { guestStatus: currentGuestStatus });
         }
       } else {
         // Free-text query
@@ -133,7 +151,7 @@ async function main() {
           sessionId: session.sessionId,
           message: input
         });
-        console.log(`\n🤖 [Concierge]:\n${res.content}\n`);
+        console.log(`\n🤖 [Chat Bot]:\n${res.content}\n`);
         console.log('\nType an option number from above or ask another question:');
       }
     });

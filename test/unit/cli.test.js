@@ -6,7 +6,7 @@ test('CLI condo-bot - executes ask, eval, and stats commands', () => {
   // 1. Single ask command
   const askOut = execSync('node bin/condo-bot.js ask "Magkano covered parking?"', { encoding: 'utf-8' });
   assert.ok(askOut.includes('₱350'));
-  assert.ok(askOut.includes('Unit 418 Concierge'));
+  assert.ok(askOut.includes('Chat Bot'));
 
   // 2. Eval regression suite
   const evalOut = execSync('node bin/condo-bot.js eval', { encoding: 'utf-8' });

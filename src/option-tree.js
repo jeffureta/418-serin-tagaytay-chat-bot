@@ -25,12 +25,29 @@ export class OptionTree {
   }
 
   /**
-   * Retrieves a menu node by its ID.
+   * Retrieves a menu node by its ID, with tier filtering for root.
    * @param {string} [menuId='root']
+   * @param {Object} [options]
+   * @param {'unbooked'|'confirmed'} [options.guestStatus='unbooked']
    * @returns {Object|null}
    */
-  getMenu(menuId = 'root') {
-    return this.menus[menuId] || null;
+  getMenu(menuId = 'root', { guestStatus = 'unbooked' } = {}) {
+    const menu = this.menus[menuId];
+    if (!menu) return null;
+
+    if (menuId === 'root' && Array.isArray(menu.options)) {
+      if (guestStatus === 'confirmed') {
+        return menu;
+      }
+      // Unbooked / first-time visitors see only unbooked topics
+      const filtered = menu.options.filter(opt => opt.tier === 'unbooked');
+      return {
+        ...menu,
+        options: filtered
+      };
+    }
+
+    return menu;
   }
 
   /**

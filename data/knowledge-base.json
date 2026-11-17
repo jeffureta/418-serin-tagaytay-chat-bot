@@ -15,16 +15,16 @@
   "menu_tree": {
     "root": {
       "id": "root",
-      "title": "Welcome to Unit 418 Serin East Tagaytay!",
-      "message": "Hello! I am your 24/7 Concierge for Unit 418 Serin East Tagaytay. How can I assist you today? Please choose an option below or type your question in English, Tagalog, or Taglish.",
+      "title": "Unit 418 Serin East Tagaytay",
+      "message": "",
       "options": [
-        { "id": "opt_booking", "label": "📅 Rates & How to Book", "icon": "📅", "target": "menu_booking" },
-        { "id": "opt_parking", "label": "🚗 Parking Details (Free vs ₱350)", "icon": "🚗", "target": "res_parking" },
-        { "id": "opt_checkin", "label": "🔑 Check-In & Smart Lock Code", "icon": "🔑", "target": "res_checkin" },
-        { "id": "opt_endorsement", "label": "📋 Admin Endorsement (Carrd Link)", "icon": "📋", "target": "res_endorsement" },
-        { "id": "opt_rules", "label": "🍳 Kitchen & House Rules", "icon": "🍳", "target": "res_rules" },
-        { "id": "opt_amenities", "label": "🏊 Pool, Wi-Fi & Appliances", "icon": "🏊", "target": "res_amenities" },
-        { "id": "opt_contact", "label": "📞 Contact Host & Caretaker", "icon": "📞", "target": "res_contact" }
+        { "id": "opt_booking", "label": "📅 How much are the rates", "icon": "📅", "target": "menu_booking", "tier": "unbooked" },
+        { "id": "opt_parking", "label": "🚗 Parking details", "icon": "🚗", "target": "res_parking", "tier": "unbooked" },
+        { "id": "opt_checkin", "label": "🔑 Check-In & Smart Lock Code", "icon": "🔑", "target": "res_checkin", "tier": "confirmed" },
+        { "id": "opt_endorsement", "label": "📋 Admin Endorsement (Carrd Link)", "icon": "📋", "target": "res_endorsement", "tier": "confirmed" },
+        { "id": "opt_rules", "label": "🍳 Kitchen & House Rules", "icon": "🍳", "target": "res_rules", "tier": "confirmed" },
+        { "id": "opt_amenities", "label": "🏊 Pool, Wi-Fi & Appliances", "icon": "🏊", "target": "res_amenities", "tier": "confirmed" },
+        { "id": "opt_contact", "label": "📞 Contact Host & Caretaker", "icon": "📞", "target": "res_contact", "tier": "confirmed" }
       ]
     },
     "menu_booking": {
@@ -32,7 +32,7 @@
       "title": "Booking & Staycation Rates",
       "message": "Unit 418 is a spacious 70sqm 2-Bedroom suite in Serin East Tagaytay. Which booking channel or pricing detail would you like to explore?",
       "options": [
-        { "id": "sub_direct", "label": "🏷️ Direct Booking Discount (-₱500/night)", "icon": "🏷️", "target": "res_booking_direct" },
+        { "id": "sub_direct", "label": "🏷️ Direct Booking Rates", "icon": "🏷️", "target": "res_booking_direct" },
         { "id": "sub_ota", "label": "🌐 Airbnb, Agoda & Booking.com", "icon": "🌐", "target": "res_booking_ota" },
         { "id": "sub_deposit", "label": "💵 Security Deposit Policy", "icon": "💵", "target": "res_booking_deposit" },
         { "id": "back_root", "label": "⬅️ Back to Main Menu", "icon": "⬅️", "target": "root" }
@@ -93,8 +93,8 @@
     },
     "res_booking_direct": {
       "id": "res_booking_direct",
-      "title": "Direct Booking Discount",
-      "text": "🏷️ **Direct Booking Advantage**:\n\nBook directly with us to save service platform fees! We offer a guaranteed **₱500/night discount** compared to prevailing 10km Tagaytay 2-bedroom OTA market rates.\n\n• **Payment Channels**: BDO / BPI Philippine Bank Transfer or GCash.\n• **Security Deposit**: ₱3,000 refundable security deposit (refunded promptly after checkout inspection).",
+      "title": "Direct Booking",
+      "text": "🏷️ **Direct Booking Advantage**:\n\nBook directly through our website to secure instant reservation confirmation with no platform service fees!\n\n• **Payment Channels**: BDO / BPI Philippine Bank Transfer or GCash.\n• **Security Deposit**: ₱3,000 refundable security deposit (refunded promptly after checkout inspection).",
       "actions": [
         { "label": "💬 Inquire for Dates", "actionType": "lead", "payload": { "service": "direct_quote" } },
         { "label": "⬅️ Back to Booking Menu", "actionType": "navigate", "target": "menu_booking" }

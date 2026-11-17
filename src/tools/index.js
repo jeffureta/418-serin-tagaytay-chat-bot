@@ -97,8 +97,7 @@ export class ToolRegistry {
       room_subtotal_php: roomTotal,
       covered_parking_total_php: parkingTotal,
       total_estimate_php: totalEstimate,
-      refundable_deposit_php: this.unit.security_deposit_direct_agoda || 3000,
-      direct_discount_note: 'Includes direct booking discount (-₱500/night vs OTA benchmark).'
+      refundable_deposit_php: this.unit.security_deposit_direct_agoda || 3000
     };
   }
 

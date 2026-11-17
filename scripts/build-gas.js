@@ -40,8 +40,33 @@ var ChatBotSdk = (function() {
     }
   }
 
-  OptionTree.prototype.getMenu = function(id) {
-    return this.menus[id || 'root'] || null;
+  OptionTree.prototype.getMenu = function(id, options) {
+    var menuId = id || 'root';
+    var menu = this.menus[menuId];
+    if (!menu) return null;
+
+    options = options || {};
+    var guestStatus = options.guestStatus || 'unbooked';
+
+    if (menuId === 'root' && Array.isArray(menu.options)) {
+      if (guestStatus === 'confirmed') {
+        return menu;
+      }
+      var filtered = [];
+      for (var f = 0; f < menu.options.length; f++) {
+        if (menu.options[f].tier === 'unbooked') {
+          filtered.push(menu.options[f]);
+        }
+      }
+      return {
+        id: menu.id,
+        title: menu.title,
+        message: menu.message,
+        options: filtered
+      };
+    }
+
+    return menu;
   };
 
   OptionTree.prototype.resolveOption = function(optionId) {
@@ -76,7 +101,7 @@ var ChatBotSdk = (function() {
     createCore: function() {
       var tree = new OptionTree();
       return {
-        getMenu: function(id) { return tree.getMenu(id); },
+        getMenu: function(id, options) { return tree.getMenu(id, options); },
         resolveOption: function(id) { return tree.resolveOption(id); },
         matchFaq: function(query) { return matchFaq(query); }
       };
@@ -89,28 +114,23 @@ fs.writeFileSync(path.join(distDir, 'ChatBotCore.gs'), coreGs, 'utf-8');
 
 // 2. Build dist/ChatBotWidget.html
 const widgetHtml = `<!-- Unit 418 Serin East ChatBot Client Widget -->
-<div id="condo-chatbot-widget" class="condo-chatbot-container">
+<div id="condo-chatbot-widget" class="condo-chatbot-container" role="dialog" aria-modal="true" aria-label="Chat Bot">
   <div class="chatbot-header">
-    <h3>Unit 418 Concierge</h3>
-    <span class="engine-badge" id="engineBadge">Deterministic NLU</span>
+    <button type="button" class="chatbot-close-btn" aria-label="Close Chat" onclick="toggleCondoChatbot(false)">✕</button>
   </div>
-  <div class="chatbot-messages" id="chatbotMessages"></div>
-  <div class="chatbot-quick-actions" id="chatbotQuickActions"></div>
-  <div class="chatbot-input-bar">
-    <input type="text" id="chatbotInput" placeholder="Type a question or select an option..." />
-    <button id="chatbotSendBtn">Send</button>
-  </div>
+  <div class="chatbot-messages" id="chatbotMessages" role="log" aria-live="polite"></div>
+  <div class="chatbot-quick-actions" id="chatbotQuickActions" role="group" aria-label="Quick options"></div>
+  <form class="chatbot-input-bar" id="chatbotInputForm" onsubmit="handleChatbotSubmit(event)">
+    <label for="chatbotInput" class="sr-only">Type a question</label>
+    <input type="text" id="chatbotInput" placeholder="Type a question or select an option..." autocomplete="off" />
+    <button type="submit" id="chatbotSendBtn" aria-label="Send Message">Send</button>
+  </form>
 </div>
 
 <script>
 (function() {
   var KB = ${JSON.stringify(kb)};
-  // Client widget logic with window.ai detection
-  console.log('[ChatBotWidget] Initialized for Unit 418');
-  if (window.ai && window.ai.languageModel) {
-    var badge = document.getElementById('engineBadge');
-    if (badge) badge.textContent = 'Chrome Gemini Nano';
-  }
+  console.log('[ChatBotWidget] Initialized');
 })();
 </script>
 `;

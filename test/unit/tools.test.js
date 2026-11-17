@@ -36,6 +36,7 @@ test('ToolRegistry - validates tool schemas and executes handlers', async () => 
   }, session.id);
   assert.ok(quoteRes.total_estimate_php > 0);
   assert.equal(quoteRes.covered_parking_total_php, 700);
+  assert.equal(quoteRes.direct_discount_note, undefined);
 
   // 4. Execute search_faq
   const faqRes = await registry.executeTool('search_faq', { query: 'cooking tuyo' }, session.id);
