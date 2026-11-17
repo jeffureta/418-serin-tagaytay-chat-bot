@@ -29,19 +29,71 @@ function appendMessage(sender, text) {
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-function renderOptions(options) {
-  optionsTray.innerHTML = '';
+function isTouchDevice() {
+  try {
+    return ('ontouchstart' in window) || (navigator && navigator.maxTouchPoints > 0);
+  } catch (e) {
+    return false;
+  }
+}
+
+function clearActiveOptions() {
+  const initialList = document.getElementById('quickOptionsList');
+  if (initialList) initialList.innerHTML = '';
+  const initialHint = document.getElementById('quickOptionHint');
+  if (initialHint) initialHint.textContent = '';
+
+  const activeInlines = document.querySelectorAll('.inline-options-container');
+  activeInlines.forEach(el => el.remove());
+}
+
+function showThinking(callback) {
+  const thinkingEl = document.createElement('div');
+  thinkingEl.className = 'chatbot-thinking-indicator';
+  thinkingEl.id = 'activeThinkingIndicator';
+  thinkingEl.textContent = 'Analyzing the query...';
+  messagesContainer.appendChild(thinkingEl);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  setTimeout(() => {
+    const active = document.getElementById('activeThinkingIndicator');
+    if (active) active.remove();
+    if (callback) callback();
+  }, 2000);
+}
+
+function renderOptions(options, targetContainer) {
+  const container = targetContainer || document.getElementById('quickOptionsList');
+  if (!container) return;
+  container.innerHTML = '';
   if (!Array.isArray(options) || options.length === 0) return;
 
   options.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
-    btn.textContent = `${opt.icon || '•'} ${opt.label}`;
+    btn.textContent = (opt.icon ? `${opt.icon} ` : '') + opt.label;
     btn.addEventListener('click', () => {
       sendOption(opt.id, opt.label);
     });
-    optionsTray.appendChild(btn);
+    container.appendChild(btn);
   });
+}
+
+function appendInlineOptions(options) {
+  if (!Array.isArray(options) || options.length === 0) return;
+
+  const inlineBox = document.createElement('div');
+  inlineBox.className = 'inline-options-container';
+
+  renderOptions(options, inlineBox);
+
+  const hint = document.createElement('div');
+  hint.className = 'chatbot-option-hint';
+  hint.textContent = isTouchDevice() ? 'Tap an option' : 'Click an option';
+  inlineBox.appendChild(hint);
+
+  messagesContainer.appendChild(inlineBox);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
 async function initChat() {
@@ -55,9 +107,13 @@ async function initChat() {
     currentSessionId = data.sessionId;
     localStorage.setItem('condo_session_id', currentSessionId);
 
-    appendMessage('bot', data.message);
     if (data.menu && data.menu.options) {
-      renderOptions(data.menu.options);
+      clearActiveOptions();
+      renderOptions(data.menu.options, document.getElementById('quickOptionsList'));
+      const hint = document.getElementById('quickOptionHint');
+      if (hint) {
+        hint.textContent = isTouchDevice() ? 'Tap an option' : 'Click an option';
+      }
     }
   } catch (err) {
     console.error('Failed to init chat:', err);
@@ -66,38 +122,73 @@ async function initChat() {
 }
 
 async function sendOption(optionId, label) {
+  clearActiveOptions();
   appendMessage('guest', label);
-  optionsTray.innerHTML = '<span style="font-size:12px;color:#64748b;padding:8px;">Loading details...</span>';
 
-  try {
-    const res = await fetch('/api/chat/turn', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: currentSessionId,
-        optionId
-      })
-    });
-    const data = await res.json();
+  showThinking(async () => {
+    try {
+      const res = await fetch('/api/chat/turn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: currentSessionId,
+          optionId
+        })
+      });
+      const data = await res.json();
 
-    appendMessage('bot', data.content);
+      appendMessage('bot', data.content);
 
-    if (data.type === 'menu' && data.menu) {
-      renderOptions(data.menu.options);
-    } else if (data.actions) {
-      renderOptions(data.actions.map(a => ({
-        id: a.target || 'root',
-        label: a.label,
-        icon: a.actionType === 'link' ? '🔗' : '👉'
-      })));
+      if (data.type === 'menu' && data.menu) {
+        appendInlineOptions(data.menu.options);
+      } else if (data.actions) {
+        appendInlineOptions(data.actions.map(a => ({
+          id: a.target || 'root',
+          label: a.label,
+          icon: a.actionType === 'link' ? '🔗' : ''
+        })));
+      }
+    } catch (err) {
+      console.error(err);
+      appendMessage('bot', 'Sorry, I encountered an issue retrieving that option. Please try again.');
     }
-  } catch (err) {
-    console.error(err);
-    appendMessage('bot', 'Sorry, I encountered an issue retrieving that option. Please try again.');
-  }
+  });
 }
 
 async function sendMessage(text) {
+  if (!text) return;
+  clearActiveOptions();
+  appendMessage('guest', text);
+
+  showThinking(async () => {
+    try {
+      const res = await fetch('/api/chat/turn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: currentSessionId,
+          query: text
+        })
+      });
+      const data = await res.json();
+
+      appendMessage('bot', data.content);
+
+      if (data.type === 'menu' && data.menu) {
+        appendInlineOptions(data.menu.options);
+      } else if (data.actions) {
+        appendInlineOptions(data.actions.map(a => ({
+          id: a.target || 'root',
+          label: a.label,
+          icon: a.actionType === 'link' ? '🔗' : ''
+        })));
+      }
+    } catch (err) {
+      console.error(err);
+      appendMessage('bot', 'Maraming salamat po! For detailed information, please select an option.');
+    }
+  });
+}
   appendMessage('guest', text);
   chatInput.value = '';
 

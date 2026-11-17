@@ -18,9 +18,9 @@ test('CondoChatbotClient - handles option clicks, free-text turns, and records h
   assert.ok(init.sessionId);
   assert.ok(init.menu);
   assert.equal(init.menu.id, 'root');
-  assert.equal(init.menu.options.length, 2);
+  assert.equal(init.menu.options.length, 1);
   assert.equal(init.menu.options[0].id, 'opt_booking');
-  assert.equal(init.menu.options[1].id, 'opt_parking');
+  assert.equal(init.menu.options[0].label, 'Book a stay');
 
   // Confirmed guest session
   const confirmedSession = client.startSession({ guestName: 'Confirmed Guest', guestStatus: 'confirmed' });

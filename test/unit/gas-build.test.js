@@ -38,10 +38,13 @@ test('build-gas - compiles dist/ChatBotCore.gs and dist/ChatBotWidget.html with 
   assert.match(widgetContent, /launcher\.classList\.remove\('is-hidden'\)/);
 
   // Verify no emojis in root menu options or sync booking
-  assert.doesNotMatch(widgetContent, /📅 How much are the rates/);
-  assert.match(widgetContent, /How much are the rates/);
-  assert.doesNotMatch(widgetContent, /🚗 Parking details/);
-  assert.match(widgetContent, /Parking details/);
+  assert.doesNotMatch(widgetContent, /📅 Book a stay/);
+  assert.match(widgetContent, /Book a stay/);
   assert.doesNotMatch(widgetContent, /🔄 Already booked\? Sync reference/);
   assert.match(widgetContent, /Already booked\? Sync reference/);
+
+  // Verify option-hint and thinking indicator presence
+  assert.ok(widgetContent.includes('chatbotOptionHint'), 'chatbotOptionHint must exist');
+  assert.ok(widgetContent.includes('Analyzing the query'), 'Analyzing the query thinking indicator must exist');
+  assert.ok(widgetContent.includes('chatbot-thinking-indicator'), 'chatbot-thinking-indicator class must exist');
 });
