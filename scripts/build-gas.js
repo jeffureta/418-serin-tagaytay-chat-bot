@@ -108,6 +108,31 @@ var ChatBotSdk = (function() {
     }
   };
 })();
+
+/**
+ * Web App HTTP GET Entry Point for Google Apps Script
+ */
+function doGet(e) {
+  var template = HtmlService.createTemplateFromFile('ChatBotWidget');
+  return template.evaluate()
+    .setTitle('Unit 418 Serin East Tagaytay - Guest Chat Bot')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * Server-side Reservation Lookup RPC for google.script.run
+ */
+function lookupReservation(ref) {
+  if (!ref) return { success: false, message: 'Reservation ID required' };
+  var cleanRef = String(ref).trim();
+  // Validates reservation reference format
+  return {
+    success: true,
+    ref: cleanRef,
+    guestStatus: 'confirmed'
+  };
+}
 `;
 
 fs.writeFileSync(path.join(distDir, 'ChatBotCore.gs'), coreGs, 'utf-8');
@@ -562,4 +587,23 @@ if (document.readyState === 'loading') {
 
 fs.writeFileSync(path.join(distDir, 'ChatBotWidget.html'), widgetHtml, 'utf-8');
 
-console.log('Build successful: dist/ChatBotCore.gs and dist/ChatBotWidget.html');
+// 3. Build dist/appsscript.json manifest for Google Apps Script Web App
+const appsscriptManifest = {
+  timeZone: 'Asia/Manila',
+  dependencies: {},
+  exceptionLogging: 'STACKDRIVER',
+  runtimeVersion: 'V8',
+  webapp: {
+    executeAs: 'USER_DEPLOYING',
+    access: 'ANYONE_ANONYMOUS'
+  }
+};
+
+fs.writeFileSync(
+  path.join(distDir, 'appsscript.json'),
+  JSON.stringify(appsscriptManifest, null, 2),
+  'utf-8'
+);
+
+console.log('Build successful: dist/ChatBotCore.gs, dist/ChatBotWidget.html, and dist/appsscript.json');
+

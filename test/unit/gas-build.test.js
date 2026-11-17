@@ -137,3 +137,23 @@ test('ChatBotWidget.html - clicking #condoChatbotLauncher opens widget and expos
   assert.equal(elements.condoChatbotLauncher.getAttribute('aria-expanded'), 'true', 'Launcher aria-expanded should be true');
   assert.equal(elements.condoChatbotLauncher.classList.contains('is-hidden'), true, 'Launcher should be hidden when open');
 });
+
+test('build-gas - generates appsscript.json manifest and gas webapp endpoints in dist/', () => {
+  execSync('node scripts/build-gas.js', { encoding: 'utf-8' });
+
+  const manifestPath = path.resolve('dist/appsscript.json');
+  assert.ok(fs.existsSync(manifestPath), 'dist/appsscript.json must be generated');
+
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  assert.equal(manifest.timeZone, 'Asia/Manila');
+  assert.equal(manifest.runtimeVersion, 'V8');
+  assert.ok(manifest.webapp, 'manifest must define webapp config');
+  assert.equal(manifest.webapp.access, 'ANYONE_ANONYMOUS');
+  assert.equal(manifest.webapp.executeAs, 'USER_DEPLOYING');
+
+  const coreContent = fs.readFileSync(path.resolve('dist/ChatBotCore.gs'), 'utf-8');
+  assert.match(coreContent, /function\s+doGet\s*\(/, 'ChatBotCore.gs must define doGet(e)');
+  assert.match(coreContent, /function\s+lookupReservation\s*\(/, 'ChatBotCore.gs must define lookupReservation(ref)');
+  assert.match(coreContent, /HtmlService\.createTemplateFromFile\(['"]ChatBotWidget['"]\)/);
+});
+
