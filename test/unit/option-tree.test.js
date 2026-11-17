@@ -9,35 +9,43 @@ const kb = JSON.parse(fs.readFileSync(path.resolve('data/knowledge-base.json'), 
 test('OptionTree - retrieves root menu and navigates options', () => {
   const tree = new OptionTree(kb);
 
-  // 1. Root Menu (unbooked default returns rates and parking)
+  // 1. Root Menu (unbooked default returns single option: Book a stay)
   const unbookedMenu = tree.getMenu('root', { guestStatus: 'unbooked' });
   assert.equal(unbookedMenu.id, 'root');
-  assert.equal(unbookedMenu.options.length, 2);
+  assert.equal(unbookedMenu.options.length, 1);
   assert.equal(unbookedMenu.options[0].id, 'opt_booking');
-  assert.equal(unbookedMenu.options[1].id, 'opt_parking');
+  assert.equal(unbookedMenu.options[0].label, 'Book a stay');
 
   // Confirmed guest menu returns all options
   const confirmedMenu = tree.getMenu('root', { guestStatus: 'confirmed' });
   assert.ok(confirmedMenu.options.length >= 7);
 
-  // 2. Sub-menu navigation
+  // 2. Sub-menu navigation for booking
   const subMenu = tree.resolveOption('opt_booking');
   assert.equal(subMenu.type, 'menu');
-  assert.equal(subMenu.data.id, 'menu_booking');
+  assert.equal(subMenu.data.id, 'menu_book_stay');
   assert.ok(subMenu.data.options.length >= 3);
 
-  // 3. Leaf resolution card (Parking)
+  // 3. Navigate into guests selection
+  const guestMenu = tree.resolveOption(subMenu.data.options[0].id);
+  assert.ok(guestMenu.type === 'menu' || guestMenu.type === 'resolution');
+
+  // 4. End-to-end checkout resolution
+  const checkoutRes = tree.resolveOption('sub_guests_small') || tree.resolveOption('res_book_checkout');
+  assert.ok(checkoutRes);
+
+  // 5. Leaf resolution card (Parking) for confirmed
   const parkingCard = tree.resolveOption('opt_parking');
   assert.equal(parkingCard.type, 'resolution');
   assert.ok(parkingCard.data.text.includes('₱350'));
   assert.ok(parkingCard.data.text.includes('Covered Tower Parking Slot'));
 
-  // 4. Endorsement Carrd Link resolution
+  // 6. Endorsement Carrd Link resolution
   const endCard = tree.resolveOption('opt_endorsement');
   assert.equal(endCard.type, 'resolution');
   assert.ok(endCard.data.text.includes('serineasttagaytayendorsement.carrd.co'));
 
-  // 5. Back navigation
+  // 7. Back navigation
   const back = tree.resolveOption('back_root');
   assert.equal(back.type, 'menu');
   assert.equal(back.data.id, 'root');

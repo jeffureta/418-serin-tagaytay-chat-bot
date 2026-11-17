@@ -119,7 +119,10 @@ const widgetHtml = `<!-- Unit 418 Serin East ChatBot Client Widget -->
     <span class="chatbot-title">Chat Bot</span>
     <button type="button" class="chatbot-close-btn" aria-label="Close Chat" onclick="toggleCondoChatbot(false)">✕</button>
   </div>
-  <div class="chatbot-quick-actions" id="chatbotQuickActions" role="group" aria-label="Quick options"></div>
+  <div class="chatbot-initial-tray" id="chatbotInitialTray">
+    <div class="chatbot-quick-actions" id="chatbotQuickActions" role="group" aria-label="Quick options"></div>
+    <div class="chatbot-option-hint" id="chatbotOptionHint" aria-hidden="true"></div>
+  </div>
   <div class="chatbot-messages" id="chatbotMessages" role="log" aria-live="polite"></div>
   <form class="chatbot-input-bar" id="chatbotInputForm" onsubmit="handleChatbotSubmit(event)">
     <label for="chatbotInput" class="sr-only">Type a question</label>
@@ -131,6 +134,14 @@ const widgetHtml = `<!-- Unit 418 Serin East ChatBot Client Widget -->
 <script>
 var CondoChatbotWidget = (function() {
   var KB = ${JSON.stringify(kb)};
+
+  function isTouchDevice() {
+    try {
+      return ('ontouchstart' in window) || (navigator && navigator.maxTouchPoints > 0);
+    } catch (e) {
+      return false;
+    }
+  }
 
   function getGuestStatus() {
     try {
@@ -150,6 +161,38 @@ var CondoChatbotWidget = (function() {
     refreshMenu();
   }
 
+  function clearActiveOptions() {
+    var initialTray = document.getElementById('chatbotQuickActions');
+    if (initialTray) initialTray.innerHTML = '';
+    var initialHint = document.getElementById('chatbotOptionHint');
+    if (initialHint) initialHint.textContent = '';
+
+    var activeInlines = document.querySelectorAll('.inline-options-container');
+    for (var i = 0; i < activeInlines.length; i++) {
+      activeInlines[i].remove();
+    }
+  }
+
+  function showThinking(callback) {
+    var container = document.getElementById('chatbotMessages');
+    if (!container) {
+      if (callback) callback();
+      return;
+    }
+    var thinkingEl = document.createElement('div');
+    thinkingEl.className = 'chatbot-thinking-indicator';
+    thinkingEl.id = 'activeThinkingIndicator';
+    thinkingEl.textContent = 'Analyzing the query...';
+    container.appendChild(thinkingEl);
+    container.scrollTop = container.scrollHeight;
+
+    setTimeout(function() {
+      var active = document.getElementById('activeThinkingIndicator');
+      if (active) active.remove();
+      if (callback) callback();
+    }, 2000);
+  }
+
   function appendMsg(sender, text) {
     var container = document.getElementById('chatbotMessages');
     if (!container) return;
@@ -164,10 +207,10 @@ var CondoChatbotWidget = (function() {
     container.scrollTop = container.scrollHeight;
   }
 
-  function renderOptions(options) {
-    var tray = document.getElementById('chatbotQuickActions');
-    if (!tray) return;
-    tray.innerHTML = '';
+  function renderOptions(options, targetContainer) {
+    var container = targetContainer || document.getElementById('chatbotQuickActions');
+    if (!container) return;
+    container.innerHTML = '';
     if (!Array.isArray(options) || options.length === 0) return;
 
     for (var i = 0; i < options.length; i++) {
@@ -179,9 +222,27 @@ var CondoChatbotWidget = (function() {
         btn.onclick = function() {
           handleOptionClick(opt);
         };
-        tray.appendChild(btn);
+        container.appendChild(btn);
       })(options[i]);
     }
+  }
+
+  function appendInlineOptions(options) {
+    if (!Array.isArray(options) || options.length === 0) return;
+    var messages = document.getElementById('chatbotMessages');
+    if (!messages) return;
+
+    var inlineBox = document.createElement('div');
+    inlineBox.className = 'inline-options-container';
+
+    var hint = document.createElement('div');
+    hint.className = 'chatbot-option-hint';
+    hint.textContent = isTouchDevice() ? 'Tap an option' : 'Click an option';
+
+    renderOptions(options, inlineBox);
+    inlineBox.appendChild(hint);
+    messages.appendChild(inlineBox);
+    messages.scrollTop = messages.scrollHeight;
   }
 
   function getRootOptions() {
@@ -207,47 +268,72 @@ var CondoChatbotWidget = (function() {
   }
 
   function refreshMenu() {
-    renderOptions(getRootOptions());
+    clearActiveOptions();
+    var rootOpts = getRootOptions();
+    renderOptions(rootOpts, document.getElementById('chatbotQuickActions'));
+    var hintEl = document.getElementById('chatbotOptionHint');
+    if (hintEl) {
+      hintEl.textContent = isTouchDevice() ? 'Tap an option' : 'Click an option';
+    }
   }
 
   function handleOptionClick(opt) {
+    clearActiveOptions();
     appendMsg('guest', opt.label);
 
-    if (opt.actionType === 'sync_booking') {
-      promptSyncBooking();
-      return;
-    }
-
-    var target = opt.target || opt.id;
-
-    if (opt.actionType === 'link' && opt.url) {
-      window.open(opt.url, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    if (KB.menu_tree && KB.menu_tree[target]) {
-      var menu = KB.menu_tree[target];
-      if (menu.message || menu.title) {
-        appendMsg('bot', menu.message || menu.title);
+    showThinking(function() {
+      if (opt.actionType === 'sync_booking') {
+        promptSyncBooking();
+        return;
       }
-      renderOptions(menu.options);
-    } else if (KB.resolutions && KB.resolutions[target]) {
-      var res = KB.resolutions[target];
-      appendMsg('bot', res.text);
-      if (res.actions) {
-        renderOptions(res.actions.map(function(a) {
-          return {
-            id: a.target || 'root',
-            target: a.target || 'root',
-            label: a.label,
-            icon: a.actionType === 'link' ? '🔗' : '👉',
-            actionType: a.actionType,
-            url: a.url
-          };
-        }));
+
+      if (opt.actionType === 'checkout') {
+        executeCheckout();
+        return;
       }
-    } else {
-      refreshMenu();
+
+      var target = opt.target || opt.id;
+
+      if (opt.actionType === 'link' && opt.url) {
+        window.open(opt.url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      if (KB.menu_tree && KB.menu_tree[target]) {
+        var menu = KB.menu_tree[target];
+        if (menu.message || menu.title) {
+          appendMsg('bot', menu.message || menu.title);
+        }
+        appendInlineOptions(menu.options);
+      } else if (KB.resolutions && KB.resolutions[target]) {
+        var res = KB.resolutions[target];
+        appendMsg('bot', res.text);
+        if (res.actions) {
+          appendInlineOptions(res.actions.map(function(a) {
+            return {
+              id: a.target || 'root',
+              target: a.target || 'root',
+              label: a.label,
+              icon: a.actionType === 'link' ? '🔗' : '',
+              actionType: a.actionType,
+              url: a.url
+            };
+          }));
+        }
+      } else {
+        refreshMenu();
+      }
+    });
+  }
+
+  function executeCheckout() {
+    appendMsg('bot', 'Proceeding to checkout! Scrolling down to the direct reservation form to lock in your dates.');
+    toggleCondoChatbot(false);
+    var form = document.getElementById('bookingForm') || document.querySelector('form');
+    if (form) {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var firstInput = form.querySelector('input');
+      if (firstInput) setTimeout(function() { firstInput.focus(); }, 400);
     }
   }
 
@@ -304,20 +390,22 @@ var CondoChatbotWidget = (function() {
 
   function handleUserMessage(query) {
     if (!query) return;
+    clearActiveOptions();
     appendMsg('guest', query);
 
-    var faqAnswer = matchFaqText(query);
-    if (faqAnswer) {
-      appendMsg('bot', faqAnswer);
-    } else {
-      appendMsg('bot', 'Maraming salamat po! For detailed information regarding rates, covered parking (₱350/night), smart lock, and endorsement, please choose an option below.');
-      refreshMenu();
-    }
+    showThinking(function() {
+      var faqAnswer = matchFaqText(query);
+      if (faqAnswer) {
+        appendMsg('bot', faqAnswer);
+      } else {
+        appendMsg('bot', 'Maraming salamat po! For detailed information regarding rates, covered parking (₱350/night), smart lock, and endorsement, please choose an option below.');
+        refreshMenu();
+      }
+    });
   }
 
   function init() {
     console.log('[ChatBotWidget] Initialized');
-    // Clean initial message log - no welcome greeting bubble
     refreshMenu();
   }
 
